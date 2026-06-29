@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポイント管理</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e4e2db;
+    --text: #1a1a18;
+    --text-sub: #6b6b66;
+    --text-muted: #9e9e98;
+    --accent: #2e7d5e;
+    --accent-bg: #eaf4ef;
+    --accent-text: #1f5c44;
+    --warning: #b45309;
+    --warning-bg: #fef3c7;
+    --danger: #c0392b;
+    --danger-bg: #fdecea;
+    --radius: 10px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  body { font-family: -apple-system,'Hiragino Sans','Yu Gothic UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+  .app { max-width: 440px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .header { text-align: center; padding: 2rem 0 1.75rem; }
+  .header-icon { font-size: 28px; margin-bottom: 0.5rem; }
+  .header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+  .header p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  .role-switch { display: flex; background: var(--border); border-radius: 8px; padding: 3px; margin-bottom: 1.5rem; }
+  .role-btn { flex: 1; padding: 7px; text-align: center; border: none; background: none; border-radius: 6px; font-size: 13px; color: var(--text-sub); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+  .role-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: var(--shadow); }
+
+  .user-btn { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem; transition: border-color 0.15s, box-shadow 0.15s; font-family: inherit; }
+  .user-btn:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,125,94,0.08); }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; background: #e8e4ff; color: #4a3fa0; }
+  .avatar.green { background: #d4f0e2; color: #1f6b44; }
+  .avatar.purple { background: #ede8ff; color: #5b4ab0; }
+  .user-name { flex: 1; font-size: 15px; font-weight: 500; }
+  .rank-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+  .rank-C { background: #f0f0f0; color: #666; }
+  .rank-B { background: #dbeafe; color: #1e40af; }
+  .rank-A { background: #fef3c7; color: #92400e; }
+  .rank-S { background: #fde8ff; color: #7e22ce; }
+
+  .back-btn { background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; margin-bottom: 1.25rem; padding: 4px 0; font-family: inherit; }
+  .back-btn:hover { color: var(--text); }
+  .page-title { font-size: 19px; font-weight: 600; margin-bottom: 1.25rem; letter-spacing: -0.3px; }
+
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.125rem; }
+  .stat-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 4px; }
+  .stat-val { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -1px; }
+  .stat-unit { font-size: 13px; font-weight: 400; color: var(--text-sub); margin-left: 2px; }
+
+  .tab-bar { display: flex; border-bottom: 1.5px solid var(--border); margin-bottom: 1.25rem; }
+  .tab { flex: 1; padding: 0.6rem; text-align: center; font-size: 13px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1.5px; transition: color 0.15s; font-weight: 500; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .job-btn { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; transition: border-color 0.15s, box-shadow 0.15s; font-family: inherit; }
+  .job-btn:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,125,94,0.08); }
+  .job-name { font-size: 14px; font-weight: 500; }
+  .job-pt { font-size: 13px; font-weight: 600; color: var(--accent); }
+
+  .prize-btn { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; transition: border-color 0.15s, box-shadow 0.15s; font-family: inherit; }
+  .prize-btn:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,125,94,0.08); }
+  .prize-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .prize-name { font-size: 14px; font-weight: 500; }
+  .prize-info { text-align: right; }
+  .prize-pt { font-size: 13px; font-weight: 600; color: var(--danger); }
+  .prize-rank { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .history-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+  .history-item:last-child { border-bottom: none; }
+  .history-job { font-size: 14px; font-weight: 500; }
+  .history-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .history-right { display: flex; align-items: center; gap: 8px; }
+  .history-pt { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .history-pt.minus { color: var(--danger); }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .badge-ok { background: var(--accent-bg); color: var(--accent-text); }
+  .badge-pending { background: var(--warning-bg); color: var(--warning); }
+
+  .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0 1rem; }
+
+  .admin-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border); gap: 8px; }
+  .admin-item:last-child { border-bottom: none; }
+  .admin-info { flex: 1; min-width: 0; }
+  .admin-name { font-size: 14px; font-weight: 500; }
+  .admin-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .admin-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn-approve { font-size: 12px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent-bg); color: var(--accent-text); cursor: pointer; font-weight: 500; font-family: inherit; transition: background 0.15s; }
+  .btn-approve:hover { background: var(--accent); color: #fff; }
+  .btn-reject { font-size: 12px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text-sub); cursor: pointer; font-family: inherit; transition: background 0.15s; }
+  .btn-reject:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+
+  .member-item { display: flex; align-items: center; gap: 10px; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+  .member-item:last-child { border-bottom: none; }
+  .member-name { flex: 1; font-size: 14px; font-weight: 500; }
+  .member-pt { font-size: 15px; font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  .rank-select { font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; cursor: pointer; }
+
+  /* PIN入力 */
+  .pin-screen { text-align: center; padding: 1rem 0; }
+  .pin-title { font-size: 16px; font-weight: 600; margin-bottom: 0.5rem; }
+  .pin-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 1.5rem; }
+  .pin-dots { display: flex; justify-content: center; gap: 12px; margin-bottom: 1.5rem; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); background: none; transition: background 0.15s, border-color 0.15s; }
+  .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+  .pin-dot.error { background: var(--danger); border-color: var(--danger); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 240px; margin: 0 auto; }
+  .pin-key { padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 18px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background 0.1s; }
+  .pin-key:hover { background: var(--bg); }
+  .pin-key:active { background: var(--border); }
+  .pin-key.del { font-size: 14px; color: var(--text-sub); }
+
+  /* 管理者ログイン */
+  .login-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+  .form-group { margin-bottom: 1rem; }
+  .form-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+  .form-input { width: 100%; padding: 0.6rem 0.875rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: inherit; background: var(--surface); color: var(--text); outline: none; transition: border-color 0.15s; }
+  .form-input:focus { border-color: var(--accent); }
+  .btn-primary { width: 100%; padding: 0.75rem; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
+  .btn-primary:hover { opacity: 0.9; }
+  .error-msg { font-size: 13px; color: var(--danger); margin-top: 0.75rem; text-align: center; }
+
+  .empty { text-align: center; padding: 2.5rem 0; color: var(--text-muted); font-size: 14px; }
+  .loading { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 14px; }
+
+  .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a18; color: #fff; font-size: 13px; padding: 0.6rem 1.25rem; border-radius: 20px; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; white-space: nowrap; z-index: 100; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; }
+  .confirm-box { background: var(--surface); border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 320px; }
+  .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 0.5rem; }
+  .confirm-body { font-size: 14px; color: var(--text-sub); margin-bottom: 1.25rem; line-height: 1.6; }
+  .confirm-actions { display: flex; gap: 8px; }
+  .confirm-actions button { flex: 1; padding: 0.7rem; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; border: 1px solid var(--border); background: none; color: var(--text); }
+  .confirm-actions .btn-ok { background: var(--accent); color: #fff; border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="toast" id="toast"></div>
+
+  <!-- ログイン画面 -->
+  <div class="screen active" id="s-login">
+    <div class="header">
+      <div class="header-icon">⭐</div>
+      <h1>ポイント管理</h1>
+      <p>名前を選んでログインしてください</p>
+    </div>
+    <div class="role-switch">
+      <button class="role-btn active" onclick="setRole('user')">利用者</button>
+      <button class="role-btn" onclick="setRole('admin')">管理者</button>
+    </div>
+    <div id="user-list"><div class="loading">読み込み中...</div></div>
+  </div>
+
+  <!-- PINコード入力 -->
+  <div class="screen" id="s-pin">
+    <button class="back-btn" onclick="show('s-login')">← 戻る</button>
+    <div class="pin-screen">
+      <div class="pin-title" id="pin-username"></div>
+      <div class="pin-sub">4桁のパスコードを入力してください</div>
+      <div class="pin-dots" id="pin-dots">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+      <div class="pin-pad">
+        <button class="pin-key" onclick="pinInput('1')">1</button>
+        <button class="pin-key" onclick="pinInput('2')">2</button>
+        <button class="pin-key" onclick="pinInput('3')">3</button>
+        <button class="pin-key" onclick="pinInput('4')">4</button>
+        <button class="pin-key" onclick="pinInput('5')">5</button>
+        <button class="pin-key" onclick="pinInput('6')">6</button>
+        <button class="pin-key" onclick="pinInput('7')">7</button>
+        <button class="pin-key" onclick="pinInput('8')">8</button>
+        <button class="pin-key" onclick="pinInput('9')">9</button>
+        <div></div>
+        <button class="pin-key" onclick="pinInput('0')">0</button>
+        <button class="pin-key del" onclick="pinDelete()">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理者ログイン -->
+  <div class="screen" id="s-admin-login">
+    <button class="back-btn" onclick="show('s-login')">← 戻る</button>
+    <div class="page-title">管理者ログイン</div>
+    <div class="login-form">
+      <div class="form-group">
+        <label class="form-label">ID</label>
+        <input class="form-input" id="admin-id" type="text" placeholder="管理者ID">
+      </div>
+      <div class="form-group">
+        <label class="form-label">パスワード</label>
+        <input class="form-input" id="admin-pw" type="password" placeholder="パスワード">
+      </div>
+      <button class="btn-primary" onclick="loginAdmin()">ログイン</button>
+      <div class="error-msg" id="admin-err" style="display:none;">IDまたはパスワードが違います</div>
+    </div>
+  </div>
+
+  <!-- 利用者ホーム -->
+  <div class="screen" id="s-home">
+    <button class="back-btn" onclick="goBack()">← 戻る</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;">
+      <div class="page-title" id="home-name" style="margin:0;flex:1;"></div>
+      <span class="rank-badge rank-C" id="home-rank">C</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-label">合計ポイント</div>
+        <div class="stat-val" id="total-pt">0<span class="stat-unit">pt</span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">承認済み業務</div>
+        <div class="stat-val" id="total-jobs">0<span class="stat-unit">件</span></div>
+      </div>
+    </div>
+    <div class="tab-bar" id="user-tabs">
+      <div class="tab active" onclick="switchTab('report')">業務報告</div>
+      <div class="tab" onclick="switchTab('prize')">景品交換</div>
+      <div class="tab" onclick="switchTab('history')">履歴</div>
+    </div>
+    <div id="tab-report">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem;">完了した業務を選んでください</div>
+      <div id="job-list"></div>
+    </div>
+    <div id="tab-prize" style="display:none;">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem;">交換したい景品を選んでください</div>
+      <div id="prize-list"></div>
+    </div>
+    <div id="tab-history" style="display:none;">
+      <div class="section-card" id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- 管理者画面 -->
+  <div class="screen" id="s-admin">
+    <button class="back-btn" onclick="goBack()">← 戻る</button>
+    <div style="display:flex;align-items:center;margin-bottom:1.25rem;">
+      <div class="page-title" style="margin:0;flex:1;">管理者画面</div>
+      <div style="font-size:12px;color:var(--text-muted);" id="admin-name-disp"></div>
+    </div>
+    <div class="tab-bar" id="admin-tabs">
+      <div class="tab active" onclick="switchAdminTab('pending')">業務承認</div>
+      <div class="tab" onclick="switchAdminTab('prizes')">景品申請</div>
+      <div class="tab" onclick="switchAdminTab('members')">メンバー</div>
+      <div class="tab" onclick="switchAdminTab('jobs')">業務管理</div>
+      <div class="tab" onclick="switchAdminTab('prizesettings')">景品管理</div>
+    </div>
+    <div id="admin-pending-wrap"><div class="section-card" id="admin-pending"></div></div>
+    <div id="admin-prizes-wrap" style="display:none;">
+      <div class="section-card" style="padding:1rem;margin-bottom:0.75rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:0.75rem;">直接景品交換</div>
+        <div class="form-group">
+          <label class="form-label">利用者</label>
+          <select class="form-input" id="direct-user-select"><option value="">選択してください</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">景品の選択方法</label>
+          <div style="display:flex;gap:8px;margin-bottom:0.5rem;">
+            <button onclick="setPrizeMode('list')" id="mode-list-btn" class="btn-approve" style="flex:1;font-size:12px;">リストから選ぶ</button>
+            <button onclick="setPrizeMode('free')" id="mode-free-btn" class="btn-reject" style="flex:1;font-size:12px;">自由入力</button>
+          </div>
+        </div>
+        <div id="prize-mode-list" class="form-group">
+          <label class="form-label">景品</label>
+          <select class="form-input" id="direct-prize-select"><option value="">選択してください</option></select>
+        </div>
+        <div id="prize-mode-free" class="form-group" style="display:none;">
+          <label class="form-label">景品名</label>
+          <input class="form-input" id="direct-prize-free" placeholder="景品名を入力">
+        </div>
+        <div class="form-group">
+          <label class="form-label">減算ポイント</label>
+          <input class="form-input" id="direct-pt-input" type="number" min="1" placeholder="例：50">
+        </div>
+        <button class="btn-primary" onclick="directExchange()" style="font-size:14px;padding:0.65rem;">交換を実行する</button>
+      </div>
+      <div style="font-size:13px;font-weight:500;color:var(--text-sub);margin-bottom:0.5rem;">利用者からの申請</div>
+      <div class="section-card" id="admin-prizes"></div>
+    </div>
+    <div id="admin-prizesettings-wrap" style="display:none;">
+      <div id="admin-prize-list" class="section-card" style="margin-bottom:0.75rem;"></div>
+      <div class="section-card" style="padding:1rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:0.75rem;" id="prize-form-title">景品を追加</div>
+        <div class="form-group">
+          <label class="form-label">景品名</label>
+          <input class="form-input" id="prize-form-name" type="text" placeholder="例：クオカード500円">
+        </div>
+        <div class="form-group">
+          <label class="form-label">必要ポイント</label>
+          <input class="form-input" id="prize-form-pt" type="number" placeholder="例：50" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">必要ランク</label>
+          <select class="form-input" id="prize-form-rank">
+            <option value="C">C（全員）</option>
+            <option value="B">B以上</option>
+            <option value="A">A以上</option>
+            <option value="S">Sのみ</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-primary" onclick="savePrize()" style="flex:1;">保存</button>
+          <button onclick="cancelPrizeEdit()" id="prize-cancel-btn" style="display:none;flex:1;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius);background:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">キャンセル</button>
+        </div>
+      </div>
+    </div>
+    <div id="admin-members-wrap" style="display:none;"><div class="section-card" id="admin-members"></div></div>
+    <div id="admin-jobs-wrap" style="display:none;">
+      <div id="admin-jobs-list" class="section-card" style="margin-bottom:1rem;"></div>
+      <div class="section-card" style="padding:1rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:0.75rem;" id="job-form-title">業務を追加</div>
+        <div class="form-group">
+          <label class="form-label">業務名</label>
+          <input class="form-input" id="job-form-name" type="text" placeholder="例：草むしり">
+        </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label class="form-label">ポイント数</label>
+          <input class="form-input" id="job-form-pt" type="number" placeholder="例：5" min="1">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-primary" onclick="saveJob()" style="flex:1;">保存</button>
+          <button onclick="cancelJobEdit()" id="job-cancel-btn" style="display:none;flex:1;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius);background:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 残高変更モーダル -->
+<div class="confirm-overlay" id="adjust-modal" style="display:none;">
+  <div class="confirm-box" style="max-width:340px;">
+    <div class="confirm-title" id="adjust-modal-title"></div>
+    <div style="font-size:13px;color:var(--text-muted);margin:0.5rem 0 1rem;">現在の残高：<strong id="adjust-current-pt" style="color:var(--accent);"></strong></div>
+    <div class="form-group">
+      <label class="form-label">変更方法</label>
+      <select class="form-input" id="adjust-mode" onchange="updateAdjustLabel()">
+        <option value="set">残高を指定値に設定する</option>
+        <option value="add">ポイントを加算する</option>
+        <option value="sub">ポイントを減算する</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="adjust-pt-label">変更後の残高（pt）</label>
+      <input class="form-input" id="adjust-pt-value" type="number" min="0" placeholder="例：100">
+    </div>
+    <input type="hidden" id="adjust-user-id">
+    <div class="confirm-actions">
+      <button onclick="closeAdjustModal()">キャンセル</button>
+      <button class="btn-ok" onclick="executeAdjust()">変更する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 確認ダイアログ -->
+<div class="confirm-overlay" id="confirm-overlay" style="display:none;">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title"></div>
+    <div class="confirm-body" id="confirm-body"></div>
+    <div class="confirm-actions">
+      <button onclick="confirmCancel()">キャンセル</button>
+      <button class="btn-ok" onclick="confirmOk()">確認</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbxR12D57I_nfng0d6glQc5E20R5B1noNBHAFYxTkRU0SZoG05nLxGooWPiRdgrCBVO1/exec';
+
+// ===== キャッシュ =====
+let cache = { users:[], jobs:[], prizes:[], history:[], prizeRequests:[] };
+
+// ===== 状態 =====
+let role = 'user';
+let currentUser = null;
+let currentAdmin = null;
+let pinBuffer = '', pinTarget = null;
+let confirmCallback = null;
+let prizeMode = 'list';
+let editingJobId = null, editingPrizeRowIndex = null;
+
+// ===== API =====
+async function api(params) {
+  const url = API + '?' + new URLSearchParams(params);
+  const res = await fetch(url);
+  return res.json();
+}
+
+// 起動時に全データ一括取得
+async function init() {
+  try {
+    const data = await api({ action: 'getAllData' });
+    cache.users        = data.users        || [];
+    cache.jobs         = data.jobs         || [];
+    cache.prizes       = data.prizes       || [];
+    cache.history      = data.history      || [];
+    cache.prizeRequests= data.prizeRequests|| [];
+    renderLogin();
+  } catch(e) {
+    document.getElementById('user-list').innerHTML = '<div class="empty">読み込みに失敗しました。ページを再読み込みしてください。</div>';
+  }
+}
+
+// データが変わる操作後だけ再取得
+async function refresh() {
+  const data = await api({ action: 'getAllData' });
+  cache.users        = data.users        || [];
+  cache.jobs         = data.jobs         || [];
+  cache.prizes       = data.prizes       || [];
+  cache.history      = data.history      || [];
+  cache.prizeRequests= data.prizeRequests|| [];
+}
+
+// ===== ユーティリティ =====
+function calcPt(userId) {
+  return cache.history.filter(h => h.userId === userId && h.status === 'ok')
+    .reduce((s,h) => s + Number(h.pt), 0);
+}
+function userHistory(userId) {
+  return cache.history.filter(h => h.userId === userId);
+}
+function RANK_ORDER() { return ['C','B','A','S']; }
+
+// ===== ログイン =====
+function setRole(r) {
+  role = r;
+  document.querySelectorAll('.role-btn').forEach((b,i) => {
+    b.classList.toggle('active', (i===0&&r==='user')||(i===1&&r==='admin'));
+  });
+  renderLogin();
+}
+
+function renderLogin() {
+  const el = document.getElementById('user-list');
+  if (role === 'admin') {
+    el.innerHTML = `<button class="user-btn" onclick="show('s-admin-login')">
+      <div class="avatar">🔑</div>
+      <span class="user-name">管理者としてログイン</span>
+    </button>`;
+  } else {
+    if (!cache.users.length) { el.innerHTML = '<div class="empty">利用者が登録されていません</div>'; return; }
+    el.innerHTML = cache.users.map(u => {
+      const pt = calcPt(u.id);
+      return `<button class="user-btn" onclick="startPin('${u.id}')">
+        <div class="avatar ${u.color||''}">${u.name.slice(0,2)}</div>
+        <span class="user-name">${u.name}</span>
+        <span class="rank-badge rank-${u.rank||'C'}">${u.rank||'C'}</span>
+      </button>`;
+    }).join('');
+  }
+}
+
+// ===== PIN =====
+function startPin(uid) {
+  pinTarget = cache.users.find(u => u.id === uid);
+  pinBuffer = '';
+  document.getElementById('pin-username').textContent = pinTarget.name + 'さん';
+  updatePinDots();
+  show('s-pin');
+}
+function pinInput(d) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += d;
+  updatePinDots();
+  if (pinBuffer.length === 4) {
+    setTimeout(() => {
+      if (pinBuffer === String(pinTarget.pin)) {
+        openUser(pinTarget.id);
+      } else {
+        document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
+        setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 600);
+      }
+    }, 100);
+  }
+}
+function pinDelete() { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); }
+function updatePinDots() {
+  document.querySelectorAll('.pin-dot').forEach((d,i) => {
+    d.classList.toggle('filled', i < pinBuffer.length);
+    d.classList.remove('error');
+  });
+}
+
+// ===== 管理者ログイン =====
+async function loginAdmin() {
+  const id = document.getElementById('admin-id').value.trim();
+  const pw = document.getElementById('admin-pw').value;
+  document.getElementById('admin-err').style.display = 'none';
+  try {
+    const data = await api({ action: 'loginAdmin', id, password: pw });
+    if (data.success) {
+      currentAdmin = { id, name: data.name };
+      document.getElementById('admin-name-disp').textContent = data.name;
+      show('s-admin');
+      switchAdminTab('pending');
+    } else {
+      document.getElementById('admin-err').style.display = 'block';
+    }
+  } catch(e) { document.getElementById('admin-err').style.display = 'block'; }
+}
+
+// ===== 利用者ホーム =====
+function openUser(uid) {
+  currentUser = cache.users.find(u => u.id === uid);
+  const rank = currentUser.rank || 'C';
+  document.getElementById('home-name').textContent = currentUser.name + 'さん';
+  const rb = document.getElementById('home-rank');
+  rb.textContent = rank + 'ランク';
+  rb.className = 'rank-badge rank-' + rank;
+  show('s-home');
+  switchTab('report');
+}
+
+function updateStats() {
+  const h = userHistory(currentUser.id);
+  const approved = h.filter(r => r.status === 'ok' && Number(r.pt) > 0);
+  const totalPt = calcPt(currentUser.id);
+  document.getElementById('total-pt').innerHTML = totalPt + '<span class="stat-unit">pt</span>';
+  document.getElementById('total-jobs').innerHTML = approved.length + '<span class="stat-unit">件</span>';
+}
+
+function renderJobs() {
+  document.getElementById('job-list').innerHTML = cache.jobs.map(j =>
+    `<button class="job-btn" onclick="confirmReport('${j.id}')">
+      <span class="job-name">${j.name}</span>
+      <span class="job-pt">+${j.pt} pt →</span>
+    </button>`).join('');
+}
+
+function renderPrizes() {
+  const totalPt = calcPt(currentUser.id);
+  const userRank = currentUser.rank || 'C';
+  const userRankIdx = RANK_ORDER().indexOf(userRank);
+  const available = cache.prizes.filter(p => RANK_ORDER().indexOf(p.rank||'C') <= userRankIdx);
+  const el = document.getElementById('prize-list');
+  if (!available.length) { el.innerHTML = '<div class="empty">交換できる景品がありません</div>'; return; }
+  el.innerHTML = available.map(p => {
+    const canExchange = totalPt >= Number(p.pt);
+    return `<button class="prize-btn" ${canExchange?'':'disabled'} onclick="confirmPrize('${p.id}','${p.name}',${p.pt})">
+      <span class="prize-name">${p.name}</span>
+      <div class="prize-info">
+        <div class="prize-pt">${p.pt} pt</div>
+        <div class="prize-rank">${p.rank||'C'}ランク以上</div>
+      </div>
+    </button>`;
+  }).join('');
+}
+
+function renderHistory() {
+  const h = [...userHistory(currentUser.id)].reverse();
+  const el = document.getElementById('history-list');
+  if (!h.length) { el.innerHTML = '<div class="empty">まだ履歴がありません</div>'; return; }
+  el.innerHTML = h.map(r => {
+    const j = cache.jobs.find(j => j.id === r.jobId);
+    const pt = Number(r.pt);
+    const isExchange = r.jobId === 'exchange';
+    const isAdjust = r.jobId === 'adjust';
+    const label = isExchange ? '景品交換' : isAdjust ? 'ポイント調整' : (j ? j.name : r.jobId);
+    return `<div class="history-item">
+      <div>
+        <div class="history-job">${label}</div>
+        <div class="history-date">${r.date}</div>
+      </div>
+      <div class="history-right">
+        <span class="history-pt ${pt<0?'minus':''}">${pt>0?'+':''}${pt} pt</span>
+        <span class="badge ${r.status==='ok'?'badge-ok':'badge-pending'}">${r.status==='ok'?'承認済':'確認中'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function confirmReport(jid) {
+  const j = cache.jobs.find(j => j.id === jid);
+  showConfirm('業務を報告しますか？', `「${j.name}」（+${j.pt} pt）を報告します。`, async () => {
+    await api({ action: 'reportJob', userId: currentUser.id, jobId: jid });
+    await refresh();
+    updateStats();
+    renderHistory();
+    showToast('「' + j.name + '」を報告しました');
+  });
+}
+
+function confirmPrize(pid, pname, ppt) {
+  showConfirm('景品を申請しますか？', `「${pname}」（${ppt} pt）を申請します。
+管理者が承認するとポイントが減算されます。`, async () => {
+    await api({ action: 'requestPrize', userId: currentUser.id, prizeId: pid });
+    showToast('景品を申請しました');
+  });
+}
+
+// ===== タブ切り替え（利用者）=====
+function switchTab(t) {
+  document.querySelectorAll('#user-tabs .tab').forEach((el,i) => {
+    el.classList.toggle('active', ['report','prize','history'][i] === t);
+  });
+  ['report','prize','history'].forEach(name => {
+    document.getElementById('tab-'+name).style.display = name===t?'':'none';
+  });
+  updateStats();
+  if (t==='report') renderJobs();
+  if (t==='prize') renderPrizes();
+  if (t==='history') renderHistory();
+}
+
+// ===== 管理者タブ =====
+function switchAdminTab(t) {
+  document.querySelectorAll('#admin-tabs .tab').forEach((el,i) => {
+    el.classList.toggle('active', ['pending','prizes','members','jobs','prizesettings'][i] === t);
+  });
+  ['pending','prizes','members','jobs','prizesettings'].forEach(name => {
+    document.getElementById('admin-'+name+'-wrap').style.display = name===t?'':'none';
+  });
+  if (t==='pending') renderAdminPending();
+  if (t==='prizes') renderAdminPrizes();
+  if (t==='members') renderAdminMembers();
+  if (t==='jobs') renderAdminJobs();
+  if (t==='prizesettings') renderAdminPrizeSettings();
+}
+
+// ===== 管理者：業務承認 =====
+function renderAdminPending() {
+  const pending = cache.history.filter(h => h.status==='pending');
+  const el = document.getElementById('admin-pending');
+  if (!pending.length) { el.innerHTML = '<div class="empty">承認待ちの報告はありません</div>'; return; }
+  el.innerHTML = pending.map(h => {
+    const u = cache.users.find(u => u.id===h.userId);
+    const j = cache.jobs.find(j => j.id===h.jobId);
+    return `<div class="admin-item">
+      <div class="admin-info">
+        <div class="admin-name">${u?u.name:h.userId}</div>
+        <div class="admin-sub">${j?j.name:h.jobId} ／ +${h.pt} pt ／ ${h.date}</div>
+      </div>
+      <div class="admin-actions">
+        <button class="btn-approve" onclick="approveJob(${h.rowIndex})">承認</button>
+        <button class="btn-reject" onclick="rejectJob(${h.rowIndex})">却下</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveJob(rowIndex) {
+  await api({ action: 'approve', rowIndex });
+  await refresh();
+  renderAdminPending();
+  showToast('承認しました');
+}
+async function rejectJob(rowIndex) {
+  await api({ action: 'reject', rowIndex });
+  await refresh();
+  renderAdminPending();
+  showToast('却下しました');
+}
+
+// ===== 管理者：景品申請 =====
+function setPrizeMode(mode) {
+  prizeMode = mode;
+  document.getElementById('prize-mode-list').style.display = mode==='list'?'':'none';
+  document.getElementById('prize-mode-free').style.display = mode==='free'?'':'none';
+  ['list','free'].forEach(m => {
+    const btn = document.getElementById('mode-'+m+'-btn');
+    btn.className = mode===m ? 'btn-approve' : 'btn-reject';
+    btn.style.cssText = 'flex:1;font-size:12px;';
+  });
+  if (mode==='free') document.getElementById('direct-pt-input').value = '';
+}
+
+function renderAdminPrizes() {
+  // フォーム初期化
+  const userSel = document.getElementById('direct-user-select');
+  const prizeSel = document.getElementById('direct-prize-select');
+  userSel.innerHTML = '<option value="">選択してください</option>' +
+    cache.users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+  prizeSel.innerHTML = '<option value="">選択してください</option>' +
+    cache.prizes.map(p => `<option value="${p.id}" data-pt="${p.pt}">${p.name}（${p.pt} pt）</option>`).join('');
+  prizeSel.onchange = () => {
+    const opt = prizeSel.selectedOptions[0];
+    document.getElementById('direct-pt-input').value = opt ? (opt.dataset.pt||'') : '';
+  };
+
+  // 申請一覧
+  const pending = cache.prizeRequests.filter(r => r.status==='pending');
+  const el = document.getElementById('admin-prizes');
+  if (!pending.length) { el.innerHTML = '<div class="empty">景品申請はありません</div>'; return; }
+  el.innerHTML = pending.map(r => {
+    const u = cache.users.find(u => u.id===r.userId);
+    return `<div class="admin-item">
+      <div class="admin-info">
+        <div class="admin-name">${u?u.name:r.userId}</div>
+        <div class="admin-sub">${r.prizeName} ／ ${r.pt} pt ／ ${r.date}</div>
+      </div>
+      <div class="admin-actions">
+        <button class="btn-approve" onclick="approvePrize(${r.rowIndex},'${r.userId}',${r.pt})">承認</button>
+        <button class="btn-reject" onclick="rejectPrize(${r.rowIndex})">却下</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function directExchange() {
+  const userId = document.getElementById('direct-user-select').value;
+  const pt = document.getElementById('direct-pt-input').value;
+  let prizeName = '', prizeId = '';
+  if (prizeMode==='list') {
+    const opt = document.getElementById('direct-prize-select').selectedOptions[0];
+    if (!opt||!opt.value) { showToast('景品を選択してください'); return; }
+    prizeName = opt.text.replace(/（.*）$/,'');
+    prizeId = opt.value;
+  } else {
+    prizeName = document.getElementById('direct-prize-free').value.trim();
+    if (!prizeName) { showToast('景品名を入力してください'); return; }
+  }
+  if (!userId||!pt) { showToast('利用者とポイントを入力してください'); return; }
+  const u = cache.users.find(u => u.id===userId);
+  showConfirm('景品交換を実行しますか？',
+    `${u?u.name:userId} さんに「${prizeName}」を交換します。
+${pt} pt を残高から減算します。`,
+    async () => {
+      if (prizeId) {
+        await api({ action:'requestPrize', userId, prizeId });
+        const reqData = await api({ action:'getPendingPrizes' });
+        const latest = (reqData.pending||[]).filter(r=>r.userId===userId).slice(-1)[0];
+        if (latest) await api({ action:'approvePrize', rowIndex:latest.rowIndex, userId, pt });
+      } else {
+        await api({ action:'adjustPoints', userId, pt:-Number(pt) });
+      }
+      await refresh();
+      document.getElementById('direct-user-select').value = '';
+      document.getElementById('direct-prize-select').value = '';
+      document.getElementById('direct-prize-free').value = '';
+      document.getElementById('direct-pt-input').value = '';
+      renderAdminPrizes();
+      showToast(`${u?u.name:userId} さんの景品交換を処理しました`);
+    }
+  );
+}
+
+async function approvePrize(rowIndex, userId, pt) {
+  await api({ action:'approvePrize', rowIndex, userId, pt });
+  await refresh();
+  renderAdminPrizes();
+  showToast('景品申請を承認しました');
+}
+async function rejectPrize(rowIndex) {
+  await api({ action:'rejectPrize', rowIndex });
+  await refresh();
+  renderAdminPrizes();
+  showToast('景品申請を却下しました');
+}
+
+// ===== 管理者：メンバー =====
+function renderAdminMembers() {
+  const el = document.getElementById('admin-members');
+  if (!cache.users.length) { el.innerHTML = '<div class="empty">メンバーがいません</div>'; return; }
+  el.innerHTML = cache.users.map(u => {
+    const pt = calcPt(u.id);
+    return `<div class="admin-item" style="flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+        <div class="avatar ${u.color||''}" style="width:32px;height:32px;font-size:11px;">${u.name.slice(0,2)}</div>
+        <div>
+          <div style="font-size:14px;font-weight:500;">${u.name}</div>
+          <div style="font-size:12px;color:var(--text-muted);">残高 <strong style="color:var(--accent);">${pt} pt</strong></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <select class="rank-select" onchange="updateRank('${u.id}',this.value)">
+          ${RANK_ORDER().map(r=>`<option value="${r}" ${(u.rank||'C')===r?'selected':''}>${r}ランク</option>`).join('')}
+        </select>
+        <button class="btn-approve" onclick="showAdjustModal('${u.id}','${u.name}',${pt})" style="font-size:12px;">残高変更</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function updateRank(userId, rank) {
+  const u = cache.users.find(u => u.id===userId);
+  if (u) u.rank = rank;
+  await api({ action:'updateRank', userId, rank });
+  showToast('ランクを更新しました');
+}
+
+function showAdjustModal(userId, userName, currentPt) {
+  document.getElementById('adjust-modal-title').textContent = userName + ' さんの残高変更';
+  document.getElementById('adjust-current-pt').textContent = currentPt + ' pt';
+  document.getElementById('adjust-mode').value = 'set';
+  document.getElementById('adjust-pt-value').value = '';
+  document.getElementById('adjust-user-id').value = userId;
+  document.getElementById('adjust-pt-label').textContent = '変更後の残高（pt）';
+  document.getElementById('adjust-modal').style.display = 'flex';
+}
+
+function updateAdjustLabel() {
+  const mode = document.getElementById('adjust-mode').value;
+  const labels = { set:'変更後の残高（pt）', add:'加算するポイント', sub:'減算するポイント' };
+  document.getElementById('adjust-pt-label').textContent = labels[mode]||'';
+}
+
+async function executeAdjust() {
+  const userId = document.getElementById('adjust-user-id').value;
+  const mode = document.getElementById('adjust-mode').value;
+  const val = Number(document.getElementById('adjust-pt-value').value);
+  if (!val && val!==0) { showToast('値を入力してください'); return; }
+  const u = cache.users.find(u => u.id===userId);
+  const currentPt = calcPt(userId);
+  let diff = mode==='set' ? val-currentPt : mode==='add' ? val : -val;
+  if (diff===0) { showToast('変更なし'); closeAdjustModal(); return; }
+  showConfirm('ポイントを変更しますか？',
+    `${u?u.name:userId} さんのポイントを
+${currentPt} pt → ${currentPt+diff} pt に変更します。`,
+    async () => {
+      await api({ action:'adjustPoints', userId, pt:diff });
+      await refresh();
+      closeAdjustModal();
+      renderAdminMembers();
+      showToast('ポイントを変更しました');
+    }
+  );
+}
+function closeAdjustModal() { document.getElementById('adjust-modal').style.display = 'none'; }
+
+// ===== 管理者：業務管理 =====
+function renderAdminJobs() {
+  const el = document.getElementById('admin-jobs-list');
+  if (!cache.jobs.length) { el.innerHTML = '<div class="empty">業務が登録されていません</div>'; return; }
+  el.innerHTML = cache.jobs.map(j =>
+    `<div class="admin-item">
+      <div class="admin-info">
+        <div class="admin-name">${j.name}</div>
+        <div class="admin-sub">${j.pt} pt</div>
+      </div>
+      <div class="admin-actions">
+        <button class="btn-approve" onclick="startEditJob('${j.id}','${j.name}',${j.pt})">編集</button>
+        <button class="btn-reject" onclick="confirmDeleteJob('${j.id}','${j.name}')">削除</button>
+      </div>
+    </div>`).join('');
+}
+
+function startEditJob(id, name, pt) {
+  editingJobId = id;
+  document.getElementById('job-form-name').value = name;
+  document.getElementById('job-form-pt').value = pt;
+  document.getElementById('job-form-title').textContent = '業務を編集';
+  document.getElementById('job-cancel-btn').style.display = '';
+}
+function cancelJobEdit() {
+  editingJobId = null;
+  document.getElementById('job-form-name').value = '';
+  document.getElementById('job-form-pt').value = '';
+  document.getElementById('job-form-title').textContent = '業務を追加';
+  document.getElementById('job-cancel-btn').style.display = 'none';
+}
+async function saveJob() {
+  const name = document.getElementById('job-form-name').value.trim();
+  const pt = document.getElementById('job-form-pt').value;
+  if (!name||!pt) { showToast('業務名とポイントを入力してください'); return; }
+  if (editingJobId) {
+    await api({ action:'updateJob', id:editingJobId, name, pt });
+    showToast('業務を更新しました');
+  } else {
+    await api({ action:'addJob', name, pt });
+    showToast('業務を追加しました');
+  }
+  cancelJobEdit();
+  await refresh();
+  renderAdminJobs();
+}
+function confirmDeleteJob(id, name) {
+  showConfirm('業務を削除しますか？', `「${name}」を削除します。この操作は元に戻せません。`, async () => {
+    await api({ action:'deleteJob', id });
+    await refresh();
+    renderAdminJobs();
+    showToast('業務を削除しました');
+  });
+}
+
+// ===== 管理者：景品管理 =====
+function renderAdminPrizeSettings() {
+  const el = document.getElementById('admin-prize-list');
+  if (!cache.prizes.length) { el.innerHTML = '<div class="empty">景品が登録されていません</div>'; return; }
+  el.innerHTML = cache.prizes.map(p =>
+    `<div class="admin-item">
+      <div class="admin-info">
+        <div class="admin-name">${p.name}</div>
+        <div class="admin-sub">${p.pt} pt ／ ${p.rank||'C'}ランク以上</div>
+      </div>
+      <div class="admin-actions">
+        <button class="btn-approve" onclick="startEditPrize(${p.rowIndex},'${p.name.replace(/'/g,"\'")}',${p.pt},'${p.rank||'C'}')">編集</button>
+        <button class="btn-reject" onclick="confirmDeletePrize(${p.rowIndex},'${p.name.replace(/'/g,"\'")}')">削除</button>
+      </div>
+    </div>`).join('');
+}
+
+function startEditPrize(rowIndex, name, pt, rank) {
+  editingPrizeRowIndex = rowIndex;
+  document.getElementById('prize-form-name').value = name;
+  document.getElementById('prize-form-pt').value = pt;
+  document.getElementById('prize-form-rank').value = rank;
+  document.getElementById('prize-form-title').textContent = '景品を編集';
+  document.getElementById('prize-cancel-btn').style.display = '';
+}
+function cancelPrizeEdit() {
+  editingPrizeRowIndex = null;
+  document.getElementById('prize-form-name').value = '';
+  document.getElementById('prize-form-pt').value = '';
+  document.getElementById('prize-form-rank').value = 'C';
+  document.getElementById('prize-form-title').textContent = '景品を追加';
+  document.getElementById('prize-cancel-btn').style.display = 'none';
+}
+async function savePrize() {
+  const name = document.getElementById('prize-form-name').value.trim();
+  const pt = document.getElementById('prize-form-pt').value;
+  const rank = document.getElementById('prize-form-rank').value;
+  if (!name||!pt) { showToast('景品名とポイントを入力してください'); return; }
+  if (editingPrizeRowIndex) {
+    await api({ action:'updatePrize', rowIndex:editingPrizeRowIndex, name, pt, rank });
+    showToast('景品を更新しました');
+  } else {
+    await api({ action:'addPrize', name, pt, rank });
+    showToast('景品を追加しました');
+  }
+  cancelPrizeEdit();
+  await refresh();
+  renderAdminPrizeSettings();
+}
+function confirmDeletePrize(rowIndex, name) {
+  showConfirm('景品を削除しますか？', `「${name}」を削除します。この操作は元に戻せません。`, async () => {
+    await api({ action:'deletePrize', rowIndex });
+    await refresh();
+    renderAdminPrizeSettings();
+    showToast('景品を削除しました');
+  });
+}
+
+// ===== 共通 =====
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goBack() { show('s-login'); renderLogin(); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function showConfirm(title, body, cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-body').textContent = body;
+  document.getElementById('confirm-overlay').style.display = 'flex';
+  confirmCallback = cb;
+}
+function confirmOk() {
+  document.getElementById('confirm-overlay').style.display = 'none';
+  if (confirmCallback) confirmCallback();
+  confirmCallback = null;
+}
+function confirmCancel() {
+  document.getElementById('confirm-overlay').style.display = 'none';
+  confirmCallback = null;
+}
+
+init();
+</script>
+</body>
+</html>
